@@ -1,0 +1,1208 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "gpuType": "T4"
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    },
+    "accelerator": "GPU"
+  },
+  "cells": [
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "!pip install transformers accelerate peft datasets\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 1000
+        },
+        "id": "oaNS4GZ6AaT8",
+        "outputId": "83fe2292-b1ee-4be0-dcb1-5198284c3afc"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Requirement already satisfied: transformers in /usr/local/lib/python3.11/dist-packages (4.51.3)\n",
+            "Requirement already satisfied: accelerate in /usr/local/lib/python3.11/dist-packages (1.6.0)\n",
+            "Requirement already satisfied: peft in /usr/local/lib/python3.11/dist-packages (0.15.2)\n",
+            "Collecting datasets\n",
+            "  Downloading datasets-3.5.1-py3-none-any.whl.metadata (19 kB)\n",
+            "Requirement already satisfied: filelock in /usr/local/lib/python3.11/dist-packages (from transformers) (3.18.0)\n",
+            "Requirement already satisfied: huggingface-hub<1.0,>=0.30.0 in /usr/local/lib/python3.11/dist-packages (from transformers) (0.30.2)\n",
+            "Requirement already satisfied: numpy>=1.17 in /usr/local/lib/python3.11/dist-packages (from transformers) (2.0.2)\n",
+            "Requirement already satisfied: packaging>=20.0 in /usr/local/lib/python3.11/dist-packages (from transformers) (24.2)\n",
+            "Requirement already satisfied: pyyaml>=5.1 in /usr/local/lib/python3.11/dist-packages (from transformers) (6.0.2)\n",
+            "Requirement already satisfied: regex!=2019.12.17 in /usr/local/lib/python3.11/dist-packages (from transformers) (2024.11.6)\n",
+            "Requirement already satisfied: requests in /usr/local/lib/python3.11/dist-packages (from transformers) (2.32.3)\n",
+            "Requirement already satisfied: tokenizers<0.22,>=0.21 in /usr/local/lib/python3.11/dist-packages (from transformers) (0.21.1)\n",
+            "Requirement already satisfied: safetensors>=0.4.3 in /usr/local/lib/python3.11/dist-packages (from transformers) (0.5.3)\n",
+            "Requirement already satisfied: tqdm>=4.27 in /usr/local/lib/python3.11/dist-packages (from transformers) (4.67.1)\n",
+            "Requirement already satisfied: psutil in /usr/local/lib/python3.11/dist-packages (from accelerate) (5.9.5)\n",
+            "Requirement already satisfied: torch>=2.0.0 in /usr/local/lib/python3.11/dist-packages (from accelerate) (2.6.0+cu124)\n",
+            "Requirement already satisfied: pyarrow>=15.0.0 in /usr/local/lib/python3.11/dist-packages (from datasets) (18.1.0)\n",
+            "Collecting dill<0.3.9,>=0.3.0 (from datasets)\n",
+            "  Downloading dill-0.3.8-py3-none-any.whl.metadata (10 kB)\n",
+            "Requirement already satisfied: pandas in /usr/local/lib/python3.11/dist-packages (from datasets) (2.2.2)\n",
+            "Collecting xxhash (from datasets)\n",
+            "  Downloading xxhash-3.5.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (12 kB)\n",
+            "Collecting multiprocess<0.70.17 (from datasets)\n",
+            "  Downloading multiprocess-0.70.16-py311-none-any.whl.metadata (7.2 kB)\n",
+            "Collecting fsspec<=2025.3.0,>=2023.1.0 (from fsspec[http]<=2025.3.0,>=2023.1.0->datasets)\n",
+            "  Downloading fsspec-2025.3.0-py3-none-any.whl.metadata (11 kB)\n",
+            "Requirement already satisfied: aiohttp in /usr/local/lib/python3.11/dist-packages (from datasets) (3.11.15)\n",
+            "Requirement already satisfied: aiohappyeyeballs>=2.3.0 in /usr/local/lib/python3.11/dist-packages (from aiohttp->datasets) (2.6.1)\n",
+            "Requirement already satisfied: aiosignal>=1.1.2 in /usr/local/lib/python3.11/dist-packages (from aiohttp->datasets) (1.3.2)\n",
+            "Requirement already satisfied: attrs>=17.3.0 in /usr/local/lib/python3.11/dist-packages (from aiohttp->datasets) (25.3.0)\n",
+            "Requirement already satisfied: frozenlist>=1.1.1 in /usr/local/lib/python3.11/dist-packages (from aiohttp->datasets) (1.6.0)\n",
+            "Requirement already satisfied: multidict<7.0,>=4.5 in /usr/local/lib/python3.11/dist-packages (from aiohttp->datasets) (6.4.3)\n",
+            "Requirement already satisfied: propcache>=0.2.0 in /usr/local/lib/python3.11/dist-packages (from aiohttp->datasets) (0.3.1)\n",
+            "Requirement already satisfied: yarl<2.0,>=1.17.0 in /usr/local/lib/python3.11/dist-packages (from aiohttp->datasets) (1.20.0)\n",
+            "Requirement already satisfied: typing-extensions>=3.7.4.3 in /usr/local/lib/python3.11/dist-packages (from huggingface-hub<1.0,>=0.30.0->transformers) (4.13.2)\n",
+            "Requirement already satisfied: charset-normalizer<4,>=2 in /usr/local/lib/python3.11/dist-packages (from requests->transformers) (3.4.1)\n",
+            "Requirement already satisfied: idna<4,>=2.5 in /usr/local/lib/python3.11/dist-packages (from requests->transformers) (3.10)\n",
+            "Requirement already satisfied: urllib3<3,>=1.21.1 in /usr/local/lib/python3.11/dist-packages (from requests->transformers) (2.4.0)\n",
+            "Requirement already satisfied: certifi>=2017.4.17 in /usr/local/lib/python3.11/dist-packages (from requests->transformers) (2025.4.26)\n",
+            "Requirement already satisfied: networkx in /usr/local/lib/python3.11/dist-packages (from torch>=2.0.0->accelerate) (3.4.2)\n",
+            "Requirement already satisfied: jinja2 in /usr/local/lib/python3.11/dist-packages (from torch>=2.0.0->accelerate) (3.1.6)\n",
+            "Collecting nvidia-cuda-nvrtc-cu12==12.4.127 (from torch>=2.0.0->accelerate)\n",
+            "  Downloading nvidia_cuda_nvrtc_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl.metadata (1.5 kB)\n",
+            "Collecting nvidia-cuda-runtime-cu12==12.4.127 (from torch>=2.0.0->accelerate)\n",
+            "  Downloading nvidia_cuda_runtime_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl.metadata (1.5 kB)\n",
+            "Collecting nvidia-cuda-cupti-cu12==12.4.127 (from torch>=2.0.0->accelerate)\n",
+            "  Downloading nvidia_cuda_cupti_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl.metadata (1.6 kB)\n",
+            "Collecting nvidia-cudnn-cu12==9.1.0.70 (from torch>=2.0.0->accelerate)\n",
+            "  Downloading nvidia_cudnn_cu12-9.1.0.70-py3-none-manylinux2014_x86_64.whl.metadata (1.6 kB)\n",
+            "Collecting nvidia-cublas-cu12==12.4.5.8 (from torch>=2.0.0->accelerate)\n",
+            "  Downloading nvidia_cublas_cu12-12.4.5.8-py3-none-manylinux2014_x86_64.whl.metadata (1.5 kB)\n",
+            "Collecting nvidia-cufft-cu12==11.2.1.3 (from torch>=2.0.0->accelerate)\n",
+            "  Downloading nvidia_cufft_cu12-11.2.1.3-py3-none-manylinux2014_x86_64.whl.metadata (1.5 kB)\n",
+            "Collecting nvidia-curand-cu12==10.3.5.147 (from torch>=2.0.0->accelerate)\n",
+            "  Downloading nvidia_curand_cu12-10.3.5.147-py3-none-manylinux2014_x86_64.whl.metadata (1.5 kB)\n",
+            "Collecting nvidia-cusolver-cu12==11.6.1.9 (from torch>=2.0.0->accelerate)\n",
+            "  Downloading nvidia_cusolver_cu12-11.6.1.9-py3-none-manylinux2014_x86_64.whl.metadata (1.6 kB)\n",
+            "Collecting nvidia-cusparse-cu12==12.3.1.170 (from torch>=2.0.0->accelerate)\n",
+            "  Downloading nvidia_cusparse_cu12-12.3.1.170-py3-none-manylinux2014_x86_64.whl.metadata (1.6 kB)\n",
+            "Requirement already satisfied: nvidia-cusparselt-cu12==0.6.2 in /usr/local/lib/python3.11/dist-packages (from torch>=2.0.0->accelerate) (0.6.2)\n",
+            "Requirement already satisfied: nvidia-nccl-cu12==2.21.5 in /usr/local/lib/python3.11/dist-packages (from torch>=2.0.0->accelerate) (2.21.5)\n",
+            "Requirement already satisfied: nvidia-nvtx-cu12==12.4.127 in /usr/local/lib/python3.11/dist-packages (from torch>=2.0.0->accelerate) (12.4.127)\n",
+            "Collecting nvidia-nvjitlink-cu12==12.4.127 (from torch>=2.0.0->accelerate)\n",
+            "  Downloading nvidia_nvjitlink_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl.metadata (1.5 kB)\n",
+            "Requirement already satisfied: triton==3.2.0 in /usr/local/lib/python3.11/dist-packages (from torch>=2.0.0->accelerate) (3.2.0)\n",
+            "Requirement already satisfied: sympy==1.13.1 in /usr/local/lib/python3.11/dist-packages (from torch>=2.0.0->accelerate) (1.13.1)\n",
+            "Requirement already satisfied: mpmath<1.4,>=1.1.0 in /usr/local/lib/python3.11/dist-packages (from sympy==1.13.1->torch>=2.0.0->accelerate) (1.3.0)\n",
+            "Requirement already satisfied: python-dateutil>=2.8.2 in /usr/local/lib/python3.11/dist-packages (from pandas->datasets) (2.9.0.post0)\n",
+            "Requirement already satisfied: pytz>=2020.1 in /usr/local/lib/python3.11/dist-packages (from pandas->datasets) (2025.2)\n",
+            "Requirement already satisfied: tzdata>=2022.7 in /usr/local/lib/python3.11/dist-packages (from pandas->datasets) (2025.2)\n",
+            "Requirement already satisfied: six>=1.5 in /usr/local/lib/python3.11/dist-packages (from python-dateutil>=2.8.2->pandas->datasets) (1.17.0)\n",
+            "Requirement already satisfied: MarkupSafe>=2.0 in /usr/local/lib/python3.11/dist-packages (from jinja2->torch>=2.0.0->accelerate) (3.0.2)\n",
+            "Downloading datasets-3.5.1-py3-none-any.whl (491 kB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m491.4/491.4 kB\u001b[0m \u001b[31m22.1 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading dill-0.3.8-py3-none-any.whl (116 kB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m116.3/116.3 kB\u001b[0m \u001b[31m12.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading fsspec-2025.3.0-py3-none-any.whl (193 kB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m193.6/193.6 kB\u001b[0m \u001b[31m17.3 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading multiprocess-0.70.16-py311-none-any.whl (143 kB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m143.5/143.5 kB\u001b[0m \u001b[31m15.7 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading nvidia_cublas_cu12-12.4.5.8-py3-none-manylinux2014_x86_64.whl (363.4 MB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m363.4/363.4 MB\u001b[0m \u001b[31m2.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading nvidia_cuda_cupti_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl (13.8 MB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m13.8/13.8 MB\u001b[0m \u001b[31m71.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading nvidia_cuda_nvrtc_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl (24.6 MB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m24.6/24.6 MB\u001b[0m \u001b[31m22.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading nvidia_cuda_runtime_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl (883 kB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m883.7/883.7 kB\u001b[0m \u001b[31m43.6 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading nvidia_cudnn_cu12-9.1.0.70-py3-none-manylinux2014_x86_64.whl (664.8 MB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m664.8/664.8 MB\u001b[0m \u001b[31m1.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading nvidia_cufft_cu12-11.2.1.3-py3-none-manylinux2014_x86_64.whl (211.5 MB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m211.5/211.5 MB\u001b[0m \u001b[31m6.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading nvidia_curand_cu12-10.3.5.147-py3-none-manylinux2014_x86_64.whl (56.3 MB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m56.3/56.3 MB\u001b[0m \u001b[31m15.7 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading nvidia_cusolver_cu12-11.6.1.9-py3-none-manylinux2014_x86_64.whl (127.9 MB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m127.9/127.9 MB\u001b[0m \u001b[31m9.7 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading nvidia_cusparse_cu12-12.3.1.170-py3-none-manylinux2014_x86_64.whl (207.5 MB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m207.5/207.5 MB\u001b[0m \u001b[31m5.9 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading nvidia_nvjitlink_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl (21.1 MB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m21.1/21.1 MB\u001b[0m \u001b[31m58.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hDownloading xxhash-3.5.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (194 kB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m194.8/194.8 kB\u001b[0m \u001b[31m15.8 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hInstalling collected packages: xxhash, nvidia-nvjitlink-cu12, nvidia-curand-cu12, nvidia-cufft-cu12, nvidia-cuda-runtime-cu12, nvidia-cuda-nvrtc-cu12, nvidia-cuda-cupti-cu12, nvidia-cublas-cu12, fsspec, dill, nvidia-cusparse-cu12, nvidia-cudnn-cu12, multiprocess, nvidia-cusolver-cu12, datasets\n",
+            "  Attempting uninstall: nvidia-nvjitlink-cu12\n",
+            "    Found existing installation: nvidia-nvjitlink-cu12 12.5.82\n",
+            "    Uninstalling nvidia-nvjitlink-cu12-12.5.82:\n",
+            "      Successfully uninstalled nvidia-nvjitlink-cu12-12.5.82\n",
+            "  Attempting uninstall: nvidia-curand-cu12\n",
+            "    Found existing installation: nvidia-curand-cu12 10.3.6.82\n",
+            "    Uninstalling nvidia-curand-cu12-10.3.6.82:\n",
+            "      Successfully uninstalled nvidia-curand-cu12-10.3.6.82\n",
+            "  Attempting uninstall: nvidia-cufft-cu12\n",
+            "    Found existing installation: nvidia-cufft-cu12 11.2.3.61\n",
+            "    Uninstalling nvidia-cufft-cu12-11.2.3.61:\n",
+            "      Successfully uninstalled nvidia-cufft-cu12-11.2.3.61\n",
+            "  Attempting uninstall: nvidia-cuda-runtime-cu12\n",
+            "    Found existing installation: nvidia-cuda-runtime-cu12 12.5.82\n",
+            "    Uninstalling nvidia-cuda-runtime-cu12-12.5.82:\n",
+            "      Successfully uninstalled nvidia-cuda-runtime-cu12-12.5.82\n",
+            "  Attempting uninstall: nvidia-cuda-nvrtc-cu12\n",
+            "    Found existing installation: nvidia-cuda-nvrtc-cu12 12.5.82\n",
+            "    Uninstalling nvidia-cuda-nvrtc-cu12-12.5.82:\n",
+            "      Successfully uninstalled nvidia-cuda-nvrtc-cu12-12.5.82\n",
+            "  Attempting uninstall: nvidia-cuda-cupti-cu12\n",
+            "    Found existing installation: nvidia-cuda-cupti-cu12 12.5.82\n",
+            "    Uninstalling nvidia-cuda-cupti-cu12-12.5.82:\n",
+            "      Successfully uninstalled nvidia-cuda-cupti-cu12-12.5.82\n",
+            "  Attempting uninstall: nvidia-cublas-cu12\n",
+            "    Found existing installation: nvidia-cublas-cu12 12.5.3.2\n",
+            "    Uninstalling nvidia-cublas-cu12-12.5.3.2:\n",
+            "      Successfully uninstalled nvidia-cublas-cu12-12.5.3.2\n",
+            "  Attempting uninstall: fsspec\n",
+            "    Found existing installation: fsspec 2025.3.2\n",
+            "    Uninstalling fsspec-2025.3.2:\n",
+            "      Successfully uninstalled fsspec-2025.3.2\n",
+            "  Attempting uninstall: nvidia-cusparse-cu12\n",
+            "    Found existing installation: nvidia-cusparse-cu12 12.5.1.3\n",
+            "    Uninstalling nvidia-cusparse-cu12-12.5.1.3:\n",
+            "      Successfully uninstalled nvidia-cusparse-cu12-12.5.1.3\n",
+            "  Attempting uninstall: nvidia-cudnn-cu12\n",
+            "    Found existing installation: nvidia-cudnn-cu12 9.3.0.75\n",
+            "    Uninstalling nvidia-cudnn-cu12-9.3.0.75:\n",
+            "      Successfully uninstalled nvidia-cudnn-cu12-9.3.0.75\n",
+            "  Attempting uninstall: nvidia-cusolver-cu12\n",
+            "    Found existing installation: nvidia-cusolver-cu12 11.6.3.83\n",
+            "    Uninstalling nvidia-cusolver-cu12-11.6.3.83:\n",
+            "      Successfully uninstalled nvidia-cusolver-cu12-11.6.3.83\n",
+            "\u001b[31mERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\n",
+            "gcsfs 2025.3.2 requires fsspec==2025.3.2, but you have fsspec 2025.3.0 which is incompatible.\u001b[0m\u001b[31m\n",
+            "\u001b[0mSuccessfully installed datasets-3.5.1 dill-0.3.8 fsspec-2025.3.0 multiprocess-0.70.16 nvidia-cublas-cu12-12.4.5.8 nvidia-cuda-cupti-cu12-12.4.127 nvidia-cuda-nvrtc-cu12-12.4.127 nvidia-cuda-runtime-cu12-12.4.127 nvidia-cudnn-cu12-9.1.0.70 nvidia-cufft-cu12-11.2.1.3 nvidia-curand-cu12-10.3.5.147 nvidia-cusolver-cu12-11.6.1.9 nvidia-cusparse-cu12-12.3.1.170 nvidia-nvjitlink-cu12-12.4.127 xxhash-3.5.0\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "application/vnd.colab-display-data+json": {
+              "pip_warning": {
+                "packages": [
+                  "nvidia"
+                ]
+              },
+              "id": "586988bd989f4bf09d4c4de455342e34"
+            }
+          },
+          "metadata": {}
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import torch\n",
+        "from torch.utils.data import Dataset, DataLoader\n",
+        "from transformers import (\n",
+        "    AutoTokenizer,\n",
+        "    AutoModel,\n",
+        "    get_linear_schedule_with_warmup,\n",
+        ")\n",
+        "from peft import get_peft_model, LoraConfig, TaskType\n",
+        "from torch.cuda.amp import autocast, GradScaler\n",
+        "from sklearn.preprocessing import StandardScaler\n",
+        "import pandas as pd\n",
+        "import numpy as np"
+      ],
+      "metadata": {
+        "id": "5JGxh8DvAjKr"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 1) Prepare your EmoBank data as before\n",
+        "emobank = pd.read_csv(\"emobank.csv\")[['text','V','A']].dropna().reset_index(drop=True)\n",
+        "# len buckets → wide features\n",
+        "emobank['len_bucket'] = pd.cut(\n",
+        "    emobank['text'].str.len(),\n",
+        "    bins=[0,50,100,150,200,300,500], labels=False\n",
+        ")\n",
+        "wide_feats = torch.tensor(\n",
+        "    pd.get_dummies(emobank['len_bucket']).values,\n",
+        "    dtype=torch.float32\n",
+        ")\n",
+        "raw_targets = emobank[['V','A']].values\n",
+        "target_scaler = StandardScaler().fit(raw_targets)\n",
+        "y_scaled = target_scaler.transform(raw_targets)\n",
+        "y_scaled = torch.tensor(y_scaled, dtype=torch.float32)\n",
+        "\n",
+        "# 2) Tokenizer + Model backbone\n",
+        "MODEL_NAME = \"sentence-transformers/all-MiniLM-L6-v2\"\n",
+        "tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)\n",
+        "bert = AutoModel.from_pretrained(MODEL_NAME)\n",
+        "\n",
+        "# 3) Attach LoRA adapters\n",
+        "lora_config = LoraConfig(\n",
+        "    task_type=TaskType.FEATURE_EXTRACTION,  # regression head on top\n",
+        "    inference_mode=False,\n",
+        "    r=8,\n",
+        "    lora_alpha=16,\n",
+        "    target_modules=[\"query\", \"value\"],  # these module names work for MiniLM\n",
+        "    lora_dropout=0.1\n",
+        ")\n",
+        "model = get_peft_model(bert, lora_config)\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "O8jVIAj0AkXZ",
+        "outputId": "179e7085-f8a1-46a3-a521-ac08dea3de49"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.11/dist-packages/huggingface_hub/utils/_auth.py:94: UserWarning: \n",
+            "The secret `HF_TOKEN` does not exist in your Colab secrets.\n",
+            "To authenticate with the Hugging Face Hub, create a token in your settings tab (https://huggingface.co/settings/tokens), set it as secret in your Google Colab and restart your session.\n",
+            "You will be able to reuse this secret in all of your notebooks.\n",
+            "Please note that authentication is recommended but still optional to access public models or datasets.\n",
+            "  warnings.warn(\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 4) Freeze all non-LoRA parameters\n",
+        "for name, param in model.named_parameters():\n",
+        "    if \"lora_\" not in name:\n",
+        "        param.requires_grad = False\n",
+        "\n",
+        "# 5) Define your VA head\n",
+        "class VAHead(torch.nn.Module):\n",
+        "    def __init__(self, wide_dim, hidden_dim=128):\n",
+        "        super().__init__()\n",
+        "        self.wide_mlp = torch.nn.Sequential(\n",
+        "            torch.nn.Linear(wide_dim, 32), torch.nn.ReLU(), torch.nn.Dropout(0.1)\n",
+        "        )\n",
+        "        self.text_mlp = torch.nn.Sequential(\n",
+        "            torch.nn.Linear(model.config.hidden_size, hidden_dim),\n",
+        "            torch.nn.ReLU(), torch.nn.Dropout(0.1)\n",
+        "        )\n",
+        "        self.out = torch.nn.Linear(hidden_dim + 32, 2)\n",
+        "\n",
+        "    def forward(self, text_repr, wide):\n",
+        "        w = self.wide_mlp(wide)\n",
+        "        t = self.text_mlp(text_repr)\n",
+        "        return self.out(torch.cat([t, w], dim=1))\n",
+        "\n",
+        "head = VAHead(wide_feats.shape[1]).to(\"cuda\")"
+      ],
+      "metadata": {
+        "id": "TOmjhzSwAqIm"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 6) Build a Dataset & DataLoader\n",
+        "class EmobankDataset(Dataset):\n",
+        "    def __init__(self, texts, wides, targets, tokenizer):\n",
+        "        self.texts = texts\n",
+        "        self.wides = wides\n",
+        "        self.targets = targets\n",
+        "        self.tokenizer = tokenizer\n",
+        "\n",
+        "    def __len__(self): return len(self.texts)\n",
+        "    def __getitem__(self, idx):\n",
+        "        enc = self.tokenizer(\n",
+        "            self.texts[idx],\n",
+        "            truncation=True, padding=\"max_length\", max_length=128,\n",
+        "            return_tensors=\"pt\"\n",
+        "        )\n",
+        "        return {\n",
+        "            \"input_ids\": enc.input_ids.squeeze(0),\n",
+        "            \"attention_mask\": enc.attention_mask.squeeze(0),\n",
+        "            \"wide\": self.wides[idx],\n",
+        "            \"target\": self.targets[idx]\n",
+        "        }\n"
+      ],
+      "metadata": {
+        "id": "PmNmqYsUAtXw"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# split train/val\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "idx_tr, idx_val = train_test_split(\n",
+        "    np.arange(len(emobank)), test_size=0.2, random_state=42\n",
+        ")\n",
+        "ds_tr = EmobankDataset(\n",
+        "    emobank.loc[idx_tr, 'text'].tolist(),\n",
+        "    wide_feats[idx_tr],\n",
+        "    y_scaled[idx_tr],\n",
+        "    tokenizer\n",
+        ")\n",
+        "ds_val = EmobankDataset(\n",
+        "    emobank.loc[idx_val, 'text'].tolist(),\n",
+        "    wide_feats[idx_val],\n",
+        "    y_scaled[idx_val],\n",
+        "    tokenizer\n",
+        ")\n",
+        "\n",
+        "train_loader = DataLoader(ds_tr, batch_size=16, shuffle=True)\n",
+        "val_loader   = DataLoader(ds_val, batch_size=32)"
+      ],
+      "metadata": {
+        "id": "uzNz9q6lAwO-"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 7) Optimizer, scheduler, AMP scaler\n",
+        "from torch.optim import Adam\n",
+        "optimizer = Adam(\n",
+        "    list(model.parameters()) + list(head.parameters()),\n",
+        "    lr=3e-4,\n",
+        "    weight_decay=1e-5\n",
+        ")\n",
+        "total_steps = len(train_loader) * 5  # e.g. 5 epochs\n",
+        "scheduler = get_linear_schedule_with_warmup(\n",
+        "    optimizer, num_warmup_steps=total_steps//10, num_training_steps=total_steps\n",
+        ")\n",
+        "scaler = GradScaler()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "hHxUnNLVAzU6",
+        "outputId": "452d70d1-c7e4-414d-e426-56b7be86d1f1"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "<ipython-input-12-6a71e7737c39>:12: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.\n",
+            "  scaler = GradScaler()\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 8) Training loop\n",
+        "device = \"cuda\"\n",
+        "model.to(device)\n",
+        "head.to(device)\n",
+        "loss_fn = torch.nn.SmoothL1Loss()\n",
+        "\n",
+        "for epoch in range(1, 6):\n",
+        "    model.train(); head.train()\n",
+        "    train_loss = 0.0\n",
+        "    for step, batch in enumerate(train_loader, 1):\n",
+        "        optimizer.zero_grad()\n",
+        "        input_ids = batch[\"input_ids\"].to(device)\n",
+        "        mask      = batch[\"attention_mask\"].to(device)\n",
+        "        wide      = batch[\"wide\"].to(device)\n",
+        "        target    = batch[\"target\"].to(device)\n",
+        "\n",
+        "        with autocast():\n",
+        "            # 8a) get [CLS] representation\n",
+        "            outputs = model(input_ids=input_ids, attention_mask=mask)\n",
+        "            cls_repr = outputs.last_hidden_state[:,0]  # batch x hidden_size\n",
+        "            preds = head(cls_repr, wide)\n",
+        "            loss = loss_fn(preds, target)\n",
+        "\n",
+        "        scaler.scale(loss).backward()\n",
+        "        scaler.step(optimizer)\n",
+        "        scaler.update()\n",
+        "        scheduler.step()\n",
+        "\n",
+        "        train_loss += loss.item()\n",
+        "    avg_tr = train_loss/len(train_loader)\n",
+        "\n",
+        "    # 8b) Validation\n",
+        "    model.eval(); head.eval()\n",
+        "    val_loss, all_preds, all_trues = 0, [], []\n",
+        "    with torch.no_grad():\n",
+        "        for batch in val_loader:\n",
+        "            input_ids = batch[\"input_ids\"].to(device)\n",
+        "            mask      = batch[\"attention_mask\"].to(device)\n",
+        "            wide      = batch[\"wide\"].to(device)\n",
+        "            target    = batch[\"target\"].to(device)\n",
+        "            outputs = model(input_ids=input_ids, attention_mask=mask)\n",
+        "            cls_repr = outputs.last_hidden_state[:,0]\n",
+        "            preds = head(cls_repr, wide)\n",
+        "            val_loss += loss_fn(preds, target).item()\n",
+        "            all_preds.append(preds.cpu().numpy())\n",
+        "            all_trues.append(target.cpu().numpy())\n",
+        "\n",
+        "    avg_val = val_loss/len(val_loader)\n",
+        "    preds_np = np.vstack(all_preds); trues_np = np.vstack(all_trues)\n",
+        "    from sklearn.metrics import r2_score\n",
+        "    val_r2 = r2_score(trues_np, preds_np)\n",
+        "\n",
+        "    print(f\"Epoch {epoch}: Train Loss={avg_tr:.3f}, Val Loss={avg_val:.3f}, Val R²={val_r2:.3f}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "zWLUuVfWA2G4",
+        "outputId": "1bb53e54-b62b-453d-e8be-73a874014bbe"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "<ipython-input-13-8b0a16f70a29>:17: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.\n",
+            "  with autocast():\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Epoch 1: Train Loss=0.344, Val Loss=0.276, Val R²=0.360\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "<ipython-input-13-8b0a16f70a29>:17: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.\n",
+            "  with autocast():\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Epoch 2: Train Loss=0.265, Val Loss=0.258, Val R²=0.416\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "<ipython-input-13-8b0a16f70a29>:17: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.\n",
+            "  with autocast():\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Epoch 3: Train Loss=0.252, Val Loss=0.261, Val R²=0.410\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "<ipython-input-13-8b0a16f70a29>:17: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.\n",
+            "  with autocast():\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Epoch 4: Train Loss=0.243, Val Loss=0.256, Val R²=0.421\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "<ipython-input-13-8b0a16f70a29>:17: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.\n",
+            "  with autocast():\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Epoch 5: Train Loss=0.239, Val Loss=0.256, Val R²=0.423\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# -------------------------------\n",
+        "# 9) PREPROCESS USER PROFILES & WIDE FEATURES\n",
+        "# -------------------------------\n",
+        "profiles = pd.read_csv(\n",
+        "    \"usersha1-profile.tsv\", sep=\"\\t\",\n",
+        "    names=[\"user\",\"gender\",\"age\",\"country\",\"signup\"]\n",
+        ")\n",
+        "# bucket age\n",
+        "profiles[\"age_bin\"] = pd.cut(\n",
+        "    profiles[\"age\"].fillna(profiles[\"age\"].median()),\n",
+        "    bins=[0,18,25,35,50,100],\n",
+        "    labels=[\"<18\",\"18-25\",\"25-35\",\"35-50\",\"50+\"]\n",
+        ")\n",
+        "\n",
+        "plays = pd.read_csv(\n",
+        "    \"usersha1-artmbid-artname-plays.tsv\", sep=\"\\t\",\n",
+        "    names=[\"user\",\"artist_id\",\"artist_name\",\"plays\"]\n",
+        ")\n",
+        "# each user's top artist\n",
+        "top_artist = (\n",
+        "    plays.groupby([\"user\",\"artist_name\"])[\"plays\"]\n",
+        "         .sum()\n",
+        "         .reset_index()\n",
+        "         .sort_values([\"user\",\"plays\"], ascending=[True,False])\n",
+        "         .groupby(\"user\")\n",
+        "         .first()[\"artist_name\"]\n",
+        ")\n",
+        "# total plays → listen‐freq bin\n",
+        "total_plays = plays.groupby(\"user\")[\"plays\"].sum().rename(\"total_plays\")\n",
+        "freq_bin = pd.cut(\n",
+        "    total_plays.fillna(0),\n",
+        "    bins=[-1,50,200,1000,1e9],\n",
+        "    labels=[\"low\",\"medium\",\"high\",\"super\"]\n",
+        ").rename(\"listen_freq\")\n",
+        "\n",
+        "logs = (\n",
+        "    profiles.set_index(\"user\")\n",
+        "            .join(top_artist.rename(\"top_artist\"), how=\"inner\")\n",
+        "            .join(freq_bin, how=\"inner\")\n",
+        "            .reset_index()\n",
+        ")\n",
+        "# Now logs has: user, gender, age, signup, age_bin, top_artist, listen_freq\n"
+      ],
+      "metadata": {
+        "id": "NX714qgRCoCO"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# -------------------------------\n",
+        "# 10) LOAD SONGS & PREDICT THEIR VA\n",
+        "# -------------------------------\n",
+        "songs = pd.read_csv(\"spotify_millsongdata.csv\")  # ensure it has: 'artist','song','text'\n",
+        "\n",
+        "# 10a) bucket lyric length with same bins as EmoBank\n",
+        "bins = [0,50,100,150,200,300,500]\n",
+        "wide_dim = wide_feats.shape[1]  # from your Emobank one‐hot\n",
+        "song_buckets = pd.cut(\n",
+        "    songs[\"text\"].str.len(),\n",
+        "    bins=bins,\n",
+        "    labels=False\n",
+        ").fillna(0).astype(int)\n",
+        "\n",
+        "# 10b) one‐hot encode into a tensor\n",
+        "song_wide = torch.nn.functional.one_hot(\n",
+        "    torch.tensor(song_buckets.values),\n",
+        "    num_classes=wide_dim\n",
+        ").float().to(device)\n",
+        "\n",
+        "# 10c) batch‐wise VA prediction\n",
+        "def predict_va(texts, wide_tensor, batch_size=16):\n",
+        "    model.eval(); head.eval()\n",
+        "    all_va = []\n",
+        "    with torch.no_grad():\n",
+        "        for i in range(0, len(texts), batch_size):\n",
+        "            batch_texts = texts[i : i+batch_size]\n",
+        "            enc = tokenizer(\n",
+        "                batch_texts,\n",
+        "                truncation=True, padding=True, max_length=128,\n",
+        "                return_tensors=\"pt\"\n",
+        "            ).to(device)\n",
+        "            cls_repr = model(\n",
+        "                input_ids=enc.input_ids,\n",
+        "                attention_mask=enc.attention_mask\n",
+        "            ).last_hidden_state[:,0]\n",
+        "            preds_scaled = head(cls_repr, wide_tensor[i : i+batch_size])\n",
+        "            va = target_scaler.inverse_transform(preds_scaled.cpu().numpy())\n",
+        "            all_va.append(va)\n",
+        "    return np.vstack(all_va)\n",
+        "\n",
+        "song_va = predict_va(songs[\"text\"].tolist(), song_wide, batch_size=16)\n",
+        "songs[\"V_pred\"], songs[\"A_pred\"] = song_va[:,0], song_va[:,1]\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "3vXJJbulCsFk"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "\n",
+        "\n",
+        "# -------------------------------\n",
+        "# 11) RECOMMENDATION FUNCTION\n",
+        "# -------------------------------\n",
+        "import numpy as np\n",
+        "\n",
+        "def recommend(query: str, user_id: str, top_k: int = 10):\n",
+        "    # 11a) predict query VA\n",
+        "    enc = tokenizer(\n",
+        "        query, truncation=True, padding=True, max_length=128, return_tensors=\"pt\"\n",
+        "    ).to(device)\n",
+        "    cls_q = model(\n",
+        "        input_ids=enc.input_ids,\n",
+        "        attention_mask=enc.attention_mask\n",
+        "    ).last_hidden_state[:,0]\n",
+        "    # wide for query length\n",
+        "    q_bucket = int(pd.cut([len(query)], bins=bins, labels=False)[0])\n",
+        "    q_wide = torch.nn.functional.one_hot(\n",
+        "        torch.tensor([q_bucket]), num_classes=wide_dim\n",
+        "    ).float().to(device)\n",
+        "    with torch.no_grad():\n",
+        "        scaled = head(cls_q, q_wide).cpu().numpy().squeeze()\n",
+        "    q_va = target_scaler.inverse_transform(scaled.reshape(1,2)).squeeze()\n",
+        "\n",
+        "    # 11b) filter by user’s top artist\n",
+        "    user_row = logs[logs[\"user\"] == user_id].iloc[0]\n",
+        "    pref_artist = user_row[\"top_artist\"]\n",
+        "    cand = songs[songs[\"artist\"] == pref_artist].copy()\n",
+        "    if cand.empty:\n",
+        "        cand = songs.copy()\n",
+        "\n",
+        "    # 11c) rank by Euclidean distance in VA space\n",
+        "    dists = np.linalg.norm(\n",
+        "        cand[[\"V_pred\",\"A_pred\"]].values - q_va, axis=1\n",
+        "    )\n",
+        "    idxs = np.argsort(dists)[:top_k]\n",
+        "    return cand.iloc[idxs][[\"artist\",\"song\",\"V_pred\",\"A_pred\"]]\n",
+        "\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "Q6v0J9xeCc4x"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# -------------------------------\n",
+        "# 12) EXAMPLE USAGE\n",
+        "# -------------------------------\n",
+        "if __name__ == \"__main__\":\n",
+        "    some_user = logs[\"user\"].iloc[0]\n",
+        "    recs = recommend(\"sitting in the grass and looking at mountains in a pleasant weather\", some_user, top_k=5)\n",
+        "    print(recs.to_string(index=False))"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "BecdrXdPCgPY",
+        "outputId": "795d5ad4-6da6-4eee-9cb7-285a591bc0c3"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "         artist                              song   V_pred   A_pred\n",
+            "       Boney M.             Jambo - Hakuna Matata 3.506725 3.182165\n",
+            "Christmas Songs Rocking Around The Christmas Tree 3.475145 3.187456\n",
+            "           Enya                       Afer Ventus 3.458696 3.161211\n",
+            "    Lea Salonga                         Happiness 3.561501 3.219189\n",
+            "  Nat King Cole                  O Christmas Tree 3.439385 3.125704\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "qqM799YqCgIV"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "FWcZSMPFCgFk"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# wide_and_deep_music_recommender.py\n",
+        "\n",
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "import torch\n",
+        "import torch.nn as nn\n",
+        "from sklearn.preprocessing import OneHotEncoder, StandardScaler\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "from torch.utils.data import Dataset, DataLoader\n",
+        "from sentence_transformers import SentenceTransformer"
+      ],
+      "metadata": {
+        "id": "7kDDBoWJyV4e"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# -------------------------------\n",
+        "# 1) TRAIN VALENCE–AROUSAL REGRESSOR\n",
+        "# -------------------------------\n",
+        "\n",
+        "# 1a) Load EmoBank\n",
+        "emobank = pd.read_csv(\"emobank.csv\")[['text','V','A']].dropna().reset_index(drop=True)\n",
+        "\n",
+        "# 1b) Wide feature for VA regressor: sentence length bucket\n",
+        "emobank['len_bucket'] = pd.cut(\n",
+        "    emobank['text'].str.len(),\n",
+        "    bins=[0,50,100,150,200,300,500],\n",
+        "    labels=False\n",
+        ")\n",
+        "wide_encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')\n",
+        "wide_feats = wide_encoder.fit_transform(emobank[['len_bucket']])\n",
+        "\n",
+        "# 1c) Deep features: SBERT embeddings\n",
+        "sbert = SentenceTransformer('all-MiniLM-L6-v2')\n",
+        "deep_embs = sbert.encode(\n",
+        "    emobank['text'].tolist(),\n",
+        "    convert_to_numpy=True\n",
+        ")\n",
+        "\n",
+        "# 1d) Scale targets\n",
+        "raw_targets   = emobank[['V','A']].values\n",
+        "target_scaler = StandardScaler().fit(raw_targets)\n",
+        "targets_scaled = target_scaler.transform(raw_targets)\n",
+        "\n",
+        "# 1e) Train/Val split\n",
+        "X_deep_tr, X_deep_val, X_wide_tr, X_wide_val, y_tr, y_val = train_test_split(\n",
+        "    deep_embs, wide_feats, targets_scaled,\n",
+        "    test_size=0.2, random_state=42\n",
+        ")\n",
+        "# 1f) Dataset & DataLoader\n",
+        "class VADataset(Dataset):\n",
+        "    def __init__(self, deeps, wides, y):\n",
+        "        self.deeps = torch.tensor(deeps, dtype=torch.float32)\n",
+        "        self.wides = torch.tensor(wides, dtype=torch.float32)\n",
+        "        self.y     = torch.tensor(y,     dtype=torch.float32)\n",
+        "    def __len__(self): return len(self.y)\n",
+        "    def __getitem__(self, idx):\n",
+        "        return self.deeps[idx], self.wides[idx], self.y[idx]\n",
+        "deep_scaler = StandardScaler().fit(X_deep_tr)\n",
+        "X_deep_tr_scaled  = deep_scaler.transform(X_deep_tr)\n",
+        "X_deep_val_scaled = deep_scaler.transform(X_deep_val)\n",
+        "\n",
+        "train_loader = DataLoader(VADataset(X_deep_tr_scaled, X_wide_tr, y_tr), batch_size=32, shuffle=True)\n",
+        "val_loader   = DataLoader(VADataset(X_deep_val_scaled, X_wide_val, y_val), batch_size=32)\n",
+        "\n",
+        "# 1g) Wide & Deep regressor\n",
+        "class WideDeepVA(nn.Module):\n",
+        "    def __init__(self, num_wide_feats):\n",
+        "        super().__init__()\n",
+        "        self.wide = nn.Linear(num_wide_feats, 2, bias=True)\n",
+        "        self.deep = nn.Sequential(\n",
+        "            nn.Linear(384, 128), nn.ReLU(),\n",
+        "            nn.Linear(128, 64),  nn.ReLU(),\n",
+        "            nn.Linear(64,   2)\n",
+        "        )\n",
+        "    def forward(self, deep_emb, wide_feat):\n",
+        "        return self.deep(deep_emb) + self.wide(wide_feat)\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "lLp4APGvyWkH"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\n",
+        "model     = WideDeepVA(num_wide_feats=wide_feats.shape[1]).to(device)\n",
+        "optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)\n",
+        "loss_fn   = nn.MSELoss()"
+      ],
+      "metadata": {
+        "id": "fxnD44exyepx"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 1) (Optionally) scale deep embeddings\n",
+        "deep_scaler = StandardScaler().fit(X_deep_tr)\n",
+        "X_deep_tr    = deep_scaler.transform(X_deep_tr)\n",
+        "X_deep_val   = deep_scaler.transform(X_deep_val)\n",
+        "\n",
+        "# 2) Revised model\n",
+        "class WideDeepVA(nn.Module):\n",
+        "    def __init__(self, num_wide_feats):\n",
+        "        super().__init__()\n",
+        "        self.wide = nn.Linear(num_wide_feats, 2)\n",
+        "        self.deep = nn.Sequential(\n",
+        "      nn.Linear(384, 512), nn.BatchNorm1d(512), nn.ReLU(), nn.Dropout(0.2),\n",
+        "      nn.Linear(512, 256), nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(0.2),\n",
+        "      nn.Linear(256, 128), nn.BatchNorm1d(128), nn.ReLU(), nn.Dropout(0.1),\n",
+        "      nn.Linear(128,  2)\n",
+        "  )\n",
+        "    def forward(self, d, w):\n",
+        "        return self.deep(d) + self.wide(w)\n",
+        "\n",
+        "model     = WideDeepVA(num_wide_feats=wide_feats.shape[1]).to(device)\n",
+        "optimizer = torch.optim.Adam(model.parameters(), lr=5e-4)\n",
+        "# scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(\n",
+        "#     optimizer, mode='min', factor=0.5, patience=2, verbose=True\n",
+        "# )\n",
+        "scheduler = torch.optim.lr_scheduler.OneCycleLR(\n",
+        "    optimizer, max_lr=1e-3,\n",
+        "    steps_per_epoch=len(train_loader),\n",
+        "    epochs=30,\n",
+        "    pct_start=0.2,\n",
+        "    div_factor=10,\n",
+        "    final_div_factor=100\n",
+        ")\n",
+        "\n",
+        "loss_fn   = nn.SmoothL1Loss()\n",
+        "\n",
+        "# 3) Training loop snippet\n",
+        "for epoch in range(1, 16):\n",
+        "    model.train()\n",
+        "    train_loss = 0\n",
+        "    for d_batch, w_batch, y_batch in train_loader:\n",
+        "        d_batch, w_batch, y_batch = d_batch.to(device), w_batch.to(device), y_batch.to(device)\n",
+        "        optimizer.zero_grad()\n",
+        "        preds = model(d_batch, w_batch)\n",
+        "        loss  = loss_fn(preds, y_batch)\n",
+        "        loss.backward()\n",
+        "        # clip gradients\n",
+        "        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)\n",
+        "        optimizer.step()\n",
+        "        train_loss += loss.item()\n",
+        "\n",
+        "    model.eval()\n",
+        "    from sklearn.metrics import r2_score\n",
+        "\n",
+        "    all_preds, all_trues = [], []\n",
+        "    with torch.no_grad():\n",
+        "        for d, w, y in val_loader:\n",
+        "            p = model(d.to(device), w.to(device)).cpu().numpy()\n",
+        "            all_preds.append(p)\n",
+        "            all_trues.append(y.numpy())\n",
+        "    preds = np.vstack(all_preds)\n",
+        "    trues = np.vstack(all_trues)\n",
+        "    print(\"Val R²:\", r2_score(trues, preds))\n",
+        "    val_loss = 0\n",
+        "    with torch.no_grad():\n",
+        "        for d_batch, w_batch, y_batch in val_loader:\n",
+        "            d_batch, w_batch, y_batch = d_batch.to(device), w_batch.to(device), y_batch.to(device)\n",
+        "            val_loss += loss_fn(model(d_batch, w_batch), y_batch).item()\n",
+        "\n",
+        "    print(f\"Epoch {epoch:2d}: Train={train_loss:.3f}, Val={val_loss:.3f}\")\n",
+        "    scheduler.step(val_loss)\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 553
+        },
+        "id": "q5EiqZuXzM_K",
+        "outputId": "8360fae8-c1b4-4883-a379-77be58e4408c"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Val R²: 0.2127988338470459\n",
+            "Epoch  1: Train=245.462, Val=49.714\n",
+            "Val R²: 0.2640690505504608\n",
+            "Epoch  2: Train=199.445, Val=46.472\n",
+            "Val R²: 0.3070223331451416\n",
+            "Epoch  3: Train=178.119, Val=43.766\n",
+            "Val R²: 0.3148863911628723\n",
+            "Epoch  4: Train=166.772, Val=43.253\n",
+            "Val R²: 0.32985541224479675\n",
+            "Epoch  5: Train=156.104, Val=42.309\n"
+          ]
+        },
+        {
+          "output_type": "error",
+          "ename": "KeyboardInterrupt",
+          "evalue": "",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mKeyboardInterrupt\u001b[0m                         Traceback (most recent call last)",
+            "\u001b[0;32m<ipython-input-39-388e86395904>\u001b[0m in \u001b[0;36m<cell line: 0>\u001b[0;34m()\u001b[0m\n\u001b[1;32m     47\u001b[0m         \u001b[0;31m# clip gradients\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     48\u001b[0m         \u001b[0mtorch\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mnn\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mutils\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mclip_grad_norm_\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmodel\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mparameters\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmax_norm\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;36m1.0\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 49\u001b[0;31m         \u001b[0moptimizer\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mstep\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     50\u001b[0m         \u001b[0mtrain_loss\u001b[0m \u001b[0;34m+=\u001b[0m \u001b[0mloss\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mitem\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     51\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/torch/optim/lr_scheduler.py\u001b[0m in \u001b[0;36mwrapper\u001b[0;34m(*args, **kwargs)\u001b[0m\n\u001b[1;32m    138\u001b[0m                     \u001b[0mopt\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mopt_ref\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    139\u001b[0m                     \u001b[0mopt\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_opt_called\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;32mTrue\u001b[0m  \u001b[0;31m# type: ignore[union-attr]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 140\u001b[0;31m                     \u001b[0;32mreturn\u001b[0m \u001b[0mfunc\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m__get__\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mopt\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mopt\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m__class__\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    141\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    142\u001b[0m                 \u001b[0mwrapper\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_wrapped_by_lr_sched\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;32mTrue\u001b[0m  \u001b[0;31m# type: ignore[attr-defined]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/torch/optim/optimizer.py\u001b[0m in \u001b[0;36mwrapper\u001b[0;34m(*args, **kwargs)\u001b[0m\n\u001b[1;32m    491\u001b[0m                             )\n\u001b[1;32m    492\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 493\u001b[0;31m                 \u001b[0mout\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mfunc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    494\u001b[0m                 \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_optimizer_step_code\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    495\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/torch/optim/optimizer.py\u001b[0m in \u001b[0;36m_use_grad\u001b[0;34m(self, *args, **kwargs)\u001b[0m\n\u001b[1;32m     89\u001b[0m             \u001b[0mtorch\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mset_grad_enabled\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdefaults\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m\"differentiable\"\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     90\u001b[0m             \u001b[0mtorch\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_dynamo\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mgraph_break\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 91\u001b[0;31m             \u001b[0mret\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mfunc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     92\u001b[0m         \u001b[0;32mfinally\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     93\u001b[0m             \u001b[0mtorch\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_dynamo\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mgraph_break\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/torch/optim/adam.py\u001b[0m in \u001b[0;36mstep\u001b[0;34m(self, closure)\u001b[0m\n\u001b[1;32m    242\u001b[0m             )\n\u001b[1;32m    243\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 244\u001b[0;31m             adam(\n\u001b[0m\u001b[1;32m    245\u001b[0m                 \u001b[0mparams_with_grad\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    246\u001b[0m                 \u001b[0mgrads\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/torch/optim/optimizer.py\u001b[0m in \u001b[0;36mmaybe_fallback\u001b[0;34m(*args, **kwargs)\u001b[0m\n\u001b[1;32m    152\u001b[0m                 \u001b[0;32mreturn\u001b[0m \u001b[0mdisabled_func\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    153\u001b[0m             \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 154\u001b[0;31m                 \u001b[0;32mreturn\u001b[0m \u001b[0mfunc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    155\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    156\u001b[0m         \u001b[0;32mreturn\u001b[0m \u001b[0mmaybe_fallback\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;31mKeyboardInterrupt\u001b[0m: "
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# # 1h) Train loop\n",
+        "# for epoch in range(1, 51):\n",
+        "#     model.train()\n",
+        "#     tl, vl = 0.0, 0.0\n",
+        "#     for de, wi, y in train_loader:\n",
+        "#         de, wi, y = de.to(device), wi.to(device), y.to(device)\n",
+        "#         optimizer.zero_grad()\n",
+        "#         pred = model(de, wi)\n",
+        "#         loss = loss_fn(pred, y)\n",
+        "#         loss.backward()\n",
+        "#         optimizer.step()\n",
+        "#         tl += loss.item()\n",
+        "#     model.eval()\n",
+        "#     with torch.no_grad():\n",
+        "#         for de, wi, y in val_loader:\n",
+        "#             de, wi, y = de.to(device), wi.to(device), y.to(device)\n",
+        "#             vl += loss_fn(model(de, wi), y).item()\n",
+        "#     print(f\"Epoch {epoch:2d}: Train MSE={tl:.3f}, Val MSE={vl:.3f}\")"
+      ],
+      "metadata": {
+        "id": "tA8lso22yhNn"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# -------------------------------\n",
+        "# 2) PREPROCESS LAST.FM 360K FOR USER WIDE FEATURES\n",
+        "# -------------------------------\n",
+        "\n",
+        "# 2a) Load profiles\n",
+        "profiles = pd.read_csv(\n",
+        "    \"usersha1-profile.tsv\", sep=\"\\t\",\n",
+        "    names=[\"user\",\"gender\",\"age\",\"country\",\"signup\"]\n",
+        ")\n",
+        "# bucket age\n",
+        "profiles['age_bin'] = pd.cut(\n",
+        "    profiles['age'].fillna(profiles['age'].median()),\n",
+        "    bins=[0,18,25,35,50,100],\n",
+        "    labels=[\"<18\",\"18-25\",\"25-35\",\"35-50\",\"50+\"]\n",
+        ")\n",
+        "\n",
+        "# 2b) Load plays\n",
+        "plays = pd.read_csv(\n",
+        "    \"usersha1-artmbid-artname-plays.tsv\", sep=\"\\t\",\n",
+        "    names=[\"user\",\"artist_id\",\"artist_name\",\"plays\"]\n",
+        ")\n",
+        "# each user's top artist\n",
+        "top_artist = (\n",
+        "    plays.groupby(['user','artist_name'])['plays']\n",
+        "         .sum()\n",
+        "         .reset_index()\n",
+        "         .sort_values(['user','plays'], ascending=[True,False])\n",
+        "         .groupby('user')\n",
+        "         .first()['artist_name']\n",
+        "         .rename('top_artist')\n",
+        ")\n",
+        "# total plays → frequency bin\n",
+        "total_plays = plays.groupby('user')['plays'].sum().rename('total_plays')\n",
+        "freq_bin = pd.cut(\n",
+        "    total_plays.fillna(0),\n",
+        "    bins=[-1, 50, 200, 1000, 1e9],\n",
+        "    labels=[\"low\",\"medium\",\"high\",\"super\"]\n",
+        ").rename('listen_freq')\n",
+        "\n",
+        "# combine into logs\n",
+        "logs = (\n",
+        "    profiles.set_index('user')\n",
+        "            .join(top_artist,    how='inner')\n",
+        "            .join(freq_bin,      how='inner')\n",
+        "            .reset_index()\n",
+        ")\n",
+        "# We'll use: age_bin, top_artist, listen_freq\n",
+        "wide_cols = ['age_bin','top_artist','listen_freq']"
+      ],
+      "metadata": {
+        "id": "vkQoRtH6yoIf"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# -------------------------------\n",
+        "# 3) LOAD SPOTIFY / MILLION SONG DATA FOR SONGS\n",
+        "# -------------------------------\n",
+        "\n",
+        "songs = pd.read_csv(\"spotify_millsongdata.csv\")\n",
+        "# assume columns: 'artist','song','link','text' (lyrics)\n",
+        "\n",
+        "# derive same len_bucket for lyrics\n",
+        "songs['len_bucket'] = pd.cut(\n",
+        "    songs['text'].str.len(),\n",
+        "    bins=[0,50,100,150,200,300,500,1000,5000,10000,1e6],\n",
+        "    labels=False\n",
+        ")\n",
+        "# encode songs with the SAME wide_encoder used for emobank\n",
+        "song_wide = wide_encoder.transform(songs[['len_bucket']])\n",
+        "\n",
+        "# deep embeddings of lyrics\n",
+        "song_deep = sbert.encode(songs['text'].tolist(), convert_to_numpy=True)\n",
+        "\n",
+        "# predict song VA (scaled space)\n",
+        "model.eval()\n",
+        "with torch.no_grad():\n",
+        "    sd = torch.tensor(song_deep, dtype=torch.float32).to(device)\n",
+        "    sw = torch.tensor(song_wide, dtype=torch.float32).to(device)\n",
+        "    song_va_scaled = model(sd, sw).cpu().numpy()\n",
+        "\n",
+        "# invert scale\n",
+        "song_va = target_scaler.inverse_transform(song_va_scaled)\n",
+        "songs['V_pred'] = song_va[:,0]\n",
+        "songs['A_pred'] = song_va[:,1]"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 371
+        },
+        "id": "3UnhM--dyqTa",
+        "outputId": "81bc7e95-e823-450a-8da6-43459d15608a"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "error",
+          "ename": "KeyboardInterrupt",
+          "evalue": "",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mKeyboardInterrupt\u001b[0m                         Traceback (most recent call last)",
+            "\u001b[0;32m<ipython-input-34-cd7a972ea8d7>\u001b[0m in \u001b[0;36m<cell line: 0>\u001b[0;34m()\u001b[0m\n\u001b[1;32m     16\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     17\u001b[0m \u001b[0;31m# deep embeddings of lyrics\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 18\u001b[0;31m \u001b[0msong_deep\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0msbert\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mencode\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0msongs\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m'text'\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtolist\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mconvert_to_numpy\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;32mTrue\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     19\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     20\u001b[0m \u001b[0;31m# predict song VA (scaled space)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/sentence_transformers/SentenceTransformer.py\u001b[0m in \u001b[0;36mencode\u001b[0;34m(self, sentences, prompt_name, prompt, batch_size, show_progress_bar, output_value, precision, convert_to_numpy, convert_to_tensor, device, normalize_embeddings, **kwargs)\u001b[0m\n\u001b[1;32m    589\u001b[0m         \u001b[0;32mfor\u001b[0m \u001b[0mstart_index\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mtrange\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m0\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mlen\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0msentences\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mbatch_size\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdesc\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;34m\"Batches\"\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mdisable\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;32mnot\u001b[0m \u001b[0mshow_progress_bar\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    590\u001b[0m             \u001b[0msentences_batch\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0msentences_sorted\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mstart_index\u001b[0m \u001b[0;34m:\u001b[0m \u001b[0mstart_index\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0mbatch_size\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 591\u001b[0;31m             \u001b[0mfeatures\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtokenize\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0msentences_batch\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    592\u001b[0m             \u001b[0;32mif\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdevice\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtype\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0;34m\"hpu\"\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    593\u001b[0m                 \u001b[0;32mif\u001b[0m \u001b[0;34m\"input_ids\"\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mfeatures\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/sentence_transformers/SentenceTransformer.py\u001b[0m in \u001b[0;36mtokenize\u001b[0;34m(self, texts)\u001b[0m\n\u001b[1;32m   1054\u001b[0m                 \u001b[0;34m\"attention_mask\"\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;32mand\u001b[0m \u001b[0;34m\"token_type_ids\"\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1055\u001b[0m         \"\"\"\n\u001b[0;32m-> 1056\u001b[0;31m         \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_first_module\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtokenize\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtexts\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   1057\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1058\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mget_sentence_features\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m*\u001b[0m\u001b[0mfeatures\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m->\u001b[0m \u001b[0mdict\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mLiteral\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m\"sentence_embedding\"\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mTensor\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/sentence_transformers/models/Transformer.py\u001b[0m in \u001b[0;36mtokenize\u001b[0;34m(self, texts, padding)\u001b[0m\n\u001b[1;32m    504\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    505\u001b[0m         output.update(\n\u001b[0;32m--> 506\u001b[0;31m             self.tokenizer(\n\u001b[0m\u001b[1;32m    507\u001b[0m                 \u001b[0;34m*\u001b[0m\u001b[0mto_tokenize\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    508\u001b[0m                 \u001b[0mpadding\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mpadding\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/transformers/tokenization_utils_base.py\u001b[0m in \u001b[0;36m__call__\u001b[0;34m(self, text, text_pair, text_target, text_pair_target, add_special_tokens, padding, truncation, max_length, stride, is_split_into_words, pad_to_multiple_of, padding_side, return_tensors, return_token_type_ids, return_attention_mask, return_overflowing_tokens, return_special_tokens_mask, return_offsets_mapping, return_length, verbose, **kwargs)\u001b[0m\n\u001b[1;32m   2885\u001b[0m             \u001b[0;32mif\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_in_target_context_manager\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   2886\u001b[0m                 \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_switch_to_input_mode\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 2887\u001b[0;31m             \u001b[0mencodings\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_call_one\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtext\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtext\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtext_pair\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtext_pair\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mall_kwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   2888\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0mtext_target\u001b[0m \u001b[0;32mis\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   2889\u001b[0m             \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_switch_to_target_mode\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/transformers/tokenization_utils_base.py\u001b[0m in \u001b[0;36m_call_one\u001b[0;34m(self, text, text_pair, add_special_tokens, padding, truncation, max_length, stride, is_split_into_words, pad_to_multiple_of, padding_side, return_tensors, return_token_type_ids, return_attention_mask, return_overflowing_tokens, return_special_tokens_mask, return_offsets_mapping, return_length, verbose, split_special_tokens, **kwargs)\u001b[0m\n\u001b[1;32m   2973\u001b[0m                 )\n\u001b[1;32m   2974\u001b[0m             \u001b[0mbatch_text_or_text_pairs\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mlist\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mzip\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtext\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtext_pair\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mif\u001b[0m \u001b[0mtext_pair\u001b[0m \u001b[0;32mis\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0;32mNone\u001b[0m \u001b[0;32melse\u001b[0m \u001b[0mtext\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 2975\u001b[0;31m             return self.batch_encode_plus(\n\u001b[0m\u001b[1;32m   2976\u001b[0m                 \u001b[0mbatch_text_or_text_pairs\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mbatch_text_or_text_pairs\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   2977\u001b[0m                 \u001b[0madd_special_tokens\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0madd_special_tokens\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/transformers/tokenization_utils_base.py\u001b[0m in \u001b[0;36mbatch_encode_plus\u001b[0;34m(self, batch_text_or_text_pairs, add_special_tokens, padding, truncation, max_length, stride, is_split_into_words, pad_to_multiple_of, padding_side, return_tensors, return_token_type_ids, return_attention_mask, return_overflowing_tokens, return_special_tokens_mask, return_offsets_mapping, return_length, verbose, split_special_tokens, **kwargs)\u001b[0m\n\u001b[1;32m   3175\u001b[0m         )\n\u001b[1;32m   3176\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 3177\u001b[0;31m         return self._batch_encode_plus(\n\u001b[0m\u001b[1;32m   3178\u001b[0m             \u001b[0mbatch_text_or_text_pairs\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mbatch_text_or_text_pairs\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   3179\u001b[0m             \u001b[0madd_special_tokens\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0madd_special_tokens\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/transformers/tokenization_utils_fast.py\u001b[0m in \u001b[0;36m_batch_encode_plus\u001b[0;34m(self, batch_text_or_text_pairs, add_special_tokens, padding_strategy, truncation_strategy, max_length, stride, is_split_into_words, pad_to_multiple_of, padding_side, return_tensors, return_token_type_ids, return_attention_mask, return_overflowing_tokens, return_special_tokens_mask, return_offsets_mapping, return_length, verbose, split_special_tokens)\u001b[0m\n\u001b[1;32m    585\u001b[0m         \u001b[0;32mfor\u001b[0m \u001b[0minput_ids\u001b[0m \u001b[0;32min\u001b[0m \u001b[0msanitized_tokens\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m\"input_ids\"\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    586\u001b[0m             \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_eventual_warn_about_too_long_sequence\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0minput_ids\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmax_length\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mverbose\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 587\u001b[0;31m         \u001b[0;32mreturn\u001b[0m \u001b[0mBatchEncoding\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0msanitized_tokens\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0msanitized_encodings\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtensor_type\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mreturn_tensors\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    588\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    589\u001b[0m     def _encode_plus(\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/transformers/tokenization_utils_base.py\u001b[0m in \u001b[0;36m__init__\u001b[0;34m(self, data, encoding, tensor_type, prepend_batch_axis, n_sequences)\u001b[0m\n\u001b[1;32m    239\u001b[0m         \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_n_sequences\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mn_sequences\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    240\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 241\u001b[0;31m         \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mconvert_to_tensors\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtensor_type\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mtensor_type\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mprepend_batch_axis\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mprepend_batch_axis\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    242\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    243\u001b[0m     \u001b[0;34m@\u001b[0m\u001b[0mproperty\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/transformers/tokenization_utils_base.py\u001b[0m in \u001b[0;36mconvert_to_tensors\u001b[0;34m(self, tensor_type, prepend_batch_axis)\u001b[0m\n\u001b[1;32m    775\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    776\u001b[0m                 \u001b[0;32mif\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0mis_tensor\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mvalue\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 777\u001b[0;31m                     \u001b[0mtensor\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mas_tensor\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mvalue\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    778\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    779\u001b[0m                     \u001b[0;31m# Removing this for now in favor of controlling the shape with `prepend_batch_axis`\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/usr/local/lib/python3.11/dist-packages/transformers/tokenization_utils_base.py\u001b[0m in \u001b[0;36mas_tensor\u001b[0;34m(value, dtype)\u001b[0m\n\u001b[1;32m    737\u001b[0m                 \u001b[0;32mif\u001b[0m \u001b[0misinstance\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mvalue\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mlist\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mand\u001b[0m \u001b[0misinstance\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mvalue\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;36m0\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mndarray\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    738\u001b[0m                     \u001b[0;32mreturn\u001b[0m \u001b[0mtorch\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfrom_numpy\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mnp\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0marray\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mvalue\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 739\u001b[0;31m                 \u001b[0;32mreturn\u001b[0m \u001b[0mtorch\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtensor\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mvalue\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    740\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    741\u001b[0m         \u001b[0;32melif\u001b[0m \u001b[0mtensor_type\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0mTensorType\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mJAX\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;31mKeyboardInterrupt\u001b[0m: "
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "# -------------------------------\n",
+        "# 4) RECOMMENDATION FUNCTION\n",
+        "# -------------------------------\n",
+        "\n",
+        "def recommend(query: str, user_id: str, top_k: int = 10):\n",
+        "    # 4a) Predict query VA\n",
+        "    q_deep = sbert.encode(query, convert_to_tensor=True).unsqueeze(0).to(device)\n",
+        "    q_bucket = int(pd.cut([len(query)],\n",
+        "                  bins=[0,50,100,150,200,300,500],\n",
+        "                  labels=False)[0])\n",
+        "    q_wide = torch.tensor(\n",
+        "        wide_encoder.transform([[q_bucket]]),\n",
+        "        dtype=torch.float32\n",
+        "    ).to(device)\n",
+        "    with torch.no_grad():\n",
+        "        q_va_scaled = model(q_deep, q_wide).cpu().numpy().squeeze()\n",
+        "    q_va = target_scaler.inverse_transform(q_va_scaled.reshape(1,2))[0]\n",
+        "\n",
+        "    # 4b) Filter songs by user's top artist (cross-product feature user×genre)\n",
+        "    user_row    = logs[logs['user']==user_id].iloc[0]\n",
+        "    pref_artist = user_row['top_artist']\n",
+        "    cand_songs  = songs[songs['artist']==pref_artist].copy()\n",
+        "    if len(cand_songs)==0:\n",
+        "        cand_songs = songs.copy()  # fallback to all songs\n",
+        "\n",
+        "    # 4c) Rank by Euclidean distance in VA space\n",
+        "    dists = np.linalg.norm(cand_songs[['V_pred','A_pred']].values - q_va, axis=1)\n",
+        "    idxs  = np.argsort(dists)[:top_k]\n",
+        "    return cand_songs.iloc[idxs][['artist','song','V_pred','A_pred']]"
+      ],
+      "metadata": {
+        "id": "PrSZctbfytI_"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "\n",
+        "# -------------------------------\n",
+        "# 5) EXAMPLE USAGE\n",
+        "# -------------------------------\n",
+        "if __name__ == \"__main__\":\n",
+        "    # train complete above\n",
+        "    example_user = logs['user'].iloc[0]\n",
+        "    recs = recommend(\"Perfect\", example_user, top_k=5)\n",
+        "    print(recs)\n"
+      ],
+      "metadata": {
+        "id": "PtwXVzQQw5AS"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
