@@ -9,3 +9,4 @@ memorizes user-emotion and emotion-genre associations through cross-product feat
 results show that personalized music selections positively influence the user’s emotion and and significant
 improvement in emotional relevance.
 
+![results](https://github.com/user-attachments/assets/caa04a19-406f-48e6-a681-7ea76d3c0864)
